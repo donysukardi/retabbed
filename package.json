@@ -1,0 +1,63 @@
+{
+  "name": "retabbed",
+  "version": "0.0.0-semantically-released",
+  "description": "Primitive to build simple, flexible, WAI-ARIA compliant React tab components",
+  "author": "donysukardi",
+  "license": "MIT",
+  "repository": "donysukardi/retabbed",
+  "main": "dist/retabbed.cjs.js",
+  "module": "dist/retabbed.esm.js",
+  "jsnext:main": "dist/retabbed.esm.js",
+  "scripts": {
+    "add-contributor": "kcd-scripts contributors add",
+    "lint": "kcd-scripts lint",
+    "build": "kcd-scripts build --bundle --no-clean",
+    "test": "kcd-scripts test",
+    "test:cover": "kcd-scripts test --coverage",
+    "test:build": "kcd-scripts test --config other/misc-tests/jest.config.js --no-watch",
+    "start": "yarn run build --watch",
+    "precommit": "kcd-scripts precommit",
+    "format": "kcd-scripts format",
+    "build-and-test": "npm run build -s && npm run test:build -s",
+    "validate": "kcd-scripts validate lint,build-and-test,test:cover,test:cypress",
+    "storybook": "start-storybook -p 9001 -c stories",
+    "storybook:build": "build-storybook -c stories",
+    "storybook:serve": "http-server ./storybook-static -p 9001 -s",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "pretest:cypress": "npm run storybook:build --silent",
+    "test:cypress": "start-server-and-test storybook:serve http://localhost:9001 cypress:run",
+    "test:cypress:dev": "npm-run-all --parallel --race storybook cypress:open"
+  },
+  "dependencies": {
+    "react-display-name": "^0.2.4"
+  },
+  "peerDependencies": {
+    "prop-types": "^15.5.4",
+    "react": "^15.0.0 || ^16.0.0",
+    "react-dom": "^15.0.0 || ^16.0.0"
+  },
+  "devDependencies": {
+    "@donysukardi/reactlib-scripts": "^1.0.1",
+    "prop-types": "^15.6.1",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "eslintConfig": {
+    "extends": [
+      "eslint-config-dsds",
+      "eslint-config-dsds/jest"
+    ]
+  },
+  "eslintIgnore": [
+    "node_modules",
+    "coverage",
+    "cypress",
+    "dist",
+    "stories",
+    "storybook-static"
+  ]
+}
