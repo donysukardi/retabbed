@@ -1,20 +1,38 @@
 /* eslint-disable react/prop-types */
 import React from 'react'
-import { render, Simulate } from 'react-testing-library'
+import { cleanup, render, fireEvent } from 'react-testing-library'
 import 'jest-dom/extend-expect'
 
 import Tabs, { createFocusableComponent, resetIdCounter } from '../index'
 
 const FocusableTab = createFocusableComponent('div')
+const fireClick = node =>
+  fireEvent(
+    node,
+    new MouseEvent('click', {
+      bubbles: true, // click events must bubble for React to see it
+      cancelable: true,
+    }),
+  )
 
-const TabsExample = ({ tabs, tabsDisabled, ...props}) => (
+const fireKeyDown = (node, config) =>
+  fireEvent(
+    node,
+    new KeyboardEvent('keydown', {
+      ...config,
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+
+const TabsExample = ({ tabs, tabsDisabled, ...props }) => (
   <Tabs {...props}>
     {({
       id,
       getTabListProps,
       getTabProps,
       getTabPanelProps,
-      selectedIndex
+      selectedIndex,
     }) => (
       <div data-testid="tabWrapper" data-id={id}>
         <div {...getTabListProps()}>
@@ -23,11 +41,9 @@ const TabsExample = ({ tabs, tabsDisabled, ...props}) => (
               {...getTabProps({
                 key: index,
                 disabled: tabsDisabled[index],
-                index
+                index,
               })}
               data-testid={`tab-${index}`}
-              data-disabled={tabsDisabled[index]}
-              data-selected={index === selectedIndex}
             >
               {tab}
             </FocusableTab>
@@ -37,7 +53,7 @@ const TabsExample = ({ tabs, tabsDisabled, ...props}) => (
           <div
             {...getTabPanelProps({
               key: index,
-              index
+              index,
             })}
             data-testid={`tabPanel-${index}`}
           >
@@ -49,7 +65,31 @@ const TabsExample = ({ tabs, tabsDisabled, ...props}) => (
   </Tabs>
 )
 
+afterEach(cleanup)
+
 describe('Tabs', () => {
+  test('works with no parameters', () => {
+    const childrenSpy = jest.fn(
+      ({ getTabListProps, getTabProps, getTabPanelProps }) => (
+        <div>
+          <ul {...getTabListProps()}>
+            <li {...getTabProps()}>Tab 1</li>
+          </ul>
+          <section {...getTabPanelProps()}>Panel 1</section>
+        </div>
+      ),
+    )
+
+    render(<Tabs id="my-tabs">{childrenSpy}</Tabs>)
+
+    expect(childrenSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'my-tabs',
+        selectedIndex: 0,
+      }),
+    )
+  })
+
   it('renders without any error', () => {
     const selectSpy = jest.fn()
     const tabs = [1, 2, 3, 4, 5]
@@ -61,7 +101,7 @@ describe('Tabs', () => {
         onSelect={selectSpy}
         tabs={tabs}
         tabsDisabled={tabsDisabled}
-      />
+      />,
     )
 
     expect(container.firstChild).toMatchSnapshot()
@@ -79,7 +119,7 @@ describe('Tabs', () => {
         onSelect={selectSpy}
         tabs={tabs}
         tabsDisabled={tabsDisabled}
-      />
+      />,
     )
 
     expect(document.activeElement).toBe(getByTestId('tab-0'))
@@ -90,14 +130,14 @@ describe('Tabs', () => {
     const tabs = [1, 2, 3, 4, 5]
     const tabsDisabled = [false, false, false, false, false]
 
-    const CustomTabsExample = ({ tabs, tabsDisabled, ...props}) => (
+    const CustomTabsExample = ({ tabs, tabsDisabled, ...props }) => (
       <Tabs {...props}>
         {({
           id,
           getTabListProps,
           getTabProps,
           getTabPanelProps,
-          selectedIndex
+          selectedIndex,
         }) => (
           <div data-testid="tabWrapper" data-id={id}>
             <div {...getTabListProps()}>
@@ -108,8 +148,6 @@ describe('Tabs', () => {
                     disabled: tabsDisabled[index],
                   })}
                   data-testid={`tab-${index}`}
-                  data-disabled={tabsDisabled[index]}
-                  data-selected={index === selectedIndex}
                 >
                   {tab}
                 </FocusableTab>
@@ -135,7 +173,7 @@ describe('Tabs', () => {
         onSelect={selectSpy}
         tabs={tabs}
         tabsDisabled={tabsDisabled}
-      />
+      />,
     )
 
     expect(container.firstChild).toMatchSnapshot()
@@ -151,15 +189,15 @@ describe('Tabs', () => {
         onSelect={selectSpy}
         tabs={tabs}
         tabsDisabled={tabsDisabled}
-      />
+      />,
     )
 
-    Simulate.click(getByTestId('tab-1'))
+    fireClick(getByTestId('tab-1'))
 
     expect(document.activeElement).toBe(getByTestId('tab-1'))
   })
 
-  it('shouldn\'t call onSelect if the same tab is clicked', () => {
+  it("shouldn't call onSelect if the same tab is clicked", () => {
     const selectSpy = jest.fn()
     const tabs = [1, 2, 3, 4, 5]
     const tabsDisabled = [false, false, false, false, false]
@@ -169,14 +207,14 @@ describe('Tabs', () => {
         onSelect={selectSpy}
         tabs={tabs}
         tabsDisabled={tabsDisabled}
-      />
+      />,
     )
 
-    Simulate.click(getByTestId('tab-1'))
+    fireClick(getByTestId('tab-1'))
     expect(document.activeElement).toBe(getByTestId('tab-1'))
 
     selectSpy.mockClear()
-    Simulate.click(getByTestId('tab-1'))
+    fireClick(getByTestId('tab-1'))
     expect(selectSpy).not.toHaveBeenCalled()
   })
 
@@ -185,36 +223,31 @@ describe('Tabs', () => {
     const tabsDisabled = [false, false, true, false, false]
 
     const { getByTestId } = render(
-      <TabsExample
-        defaultIndex={0}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={0} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 37 }) // left
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 37 }) // left
     expect(document.activeElement).toBe(getByTestId('tab-4'))
 
-    Simulate.keyDown(getByTestId('tab-4'), { keyCode: 39 }) // right
+    fireKeyDown(getByTestId('tab-4'), { keyCode: 39 }) // right
     expect(document.activeElement).toBe(getByTestId('tab-0'))
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 39 }) // right
-    Simulate.keyDown(getByTestId('tab-1'), { keyCode: 40 }) // down
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 39 }) // right
+    fireKeyDown(getByTestId('tab-1'), { keyCode: 40 }) // down
     expect(document.activeElement).toBe(getByTestId('tab-3'))
 
-    Simulate.keyDown(getByTestId('tab-3'), { keyCode: 36 }) // home
+    fireKeyDown(getByTestId('tab-3'), { keyCode: 36 }) // home
     expect(document.activeElement).toBe(getByTestId('tab-0'))
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 38 }) // up
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 38 }) // up
     expect(document.activeElement).toBe(getByTestId('tab-4'))
 
-    Simulate.keyDown(getByTestId('tab-4'), { keyCode: 35 }) // end
+    fireKeyDown(getByTestId('tab-4'), { keyCode: 35 }) // end
     expect(document.activeElement).toBe(getByTestId('tab-4'))
 
-    Simulate.keyDown(getByTestId('tab-4'), { keyCode: 37 }) // left
-    Simulate.keyDown(getByTestId('tab-3'), { keyCode: 37 })
+    fireKeyDown(getByTestId('tab-4'), { keyCode: 37 }) // left
+    fireKeyDown(getByTestId('tab-3'), { keyCode: 37 })
     expect(document.activeElement).toBe(getByTestId('tab-1'))
-
   })
 
   it('changes selectedIndex onKeyDown (disabled)', () => {
@@ -223,115 +256,99 @@ describe('Tabs', () => {
     let getByTestId
 
     const { getByTestId: getByTestId1 } = render(
-      <TabsExample
-        defaultIndex={0}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={0} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     getByTestId = getByTestId1
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 37 }) // left
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 37 }) // left
     expect(document.activeElement).toBe(getByTestId('tab-0'))
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 39 }) // right
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 39 }) // right
     expect(document.activeElement).toBe(getByTestId('tab-0'))
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 36 }) // home
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 36 }) // home
     expect(document.activeElement).toBe(getByTestId('tab-0'))
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 35 }) // end
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 35 }) // end
     expect(document.activeElement).toBe(getByTestId('tab-0'))
 
     tabsDisabled = [true, true, false, true, true]
 
+    cleanup()
+
     const { getByTestId: getByTestId2 } = render(
-      <TabsExample
-        defaultIndex={2}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={2} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     getByTestId = getByTestId2
 
-    Simulate.keyDown(getByTestId('tab-2'), { keyCode: 37 }) // left
+    fireKeyDown(getByTestId('tab-2'), { keyCode: 37 }) // left
     expect(document.activeElement).toBe(getByTestId('tab-2'))
 
     tabsDisabled = [true, false, false, true, true]
 
+    cleanup()
+
     const { getByTestId: getByTestId3 } = render(
-      <TabsExample
-        defaultIndex={2}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={2} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     getByTestId = getByTestId3
 
-    Simulate.keyDown(getByTestId('tab-2'), { keyCode: 37 }) // left
+    fireKeyDown(getByTestId('tab-2'), { keyCode: 37 }) // left
     expect(document.activeElement).toBe(getByTestId('tab-1'))
 
     tabsDisabled = [true, true, false, true, false]
 
+    cleanup()
+
     const { getByTestId: getByTestId4 } = render(
-      <TabsExample
-        defaultIndex={2}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={2} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     getByTestId = getByTestId4
 
-    Simulate.keyDown(getByTestId('tab-2'), { keyCode: 37 }) // left
+    fireKeyDown(getByTestId('tab-2'), { keyCode: 37 }) // left
     expect(document.activeElement).toBe(getByTestId('tab-4'))
 
     tabsDisabled = [true, false, false, false, true]
 
+    cleanup()
+
     const { getByTestId: getByTestId5 } = render(
-      <TabsExample
-        defaultIndex={3}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={3} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     getByTestId = getByTestId5
 
-    Simulate.keyDown(getByTestId('tab-3'), { keyCode: 39 }) // right
+    fireKeyDown(getByTestId('tab-3'), { keyCode: 39 }) // right
     expect(document.activeElement).toBe(getByTestId('tab-1'))
 
     tabsDisabled = [true, true, false, false, false]
 
+    cleanup()
+
     const { getByTestId: getByTestId6 } = render(
-      <TabsExample
-        defaultIndex={4}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={4} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     getByTestId = getByTestId6
 
-    Simulate.keyDown(getByTestId('tab-4'), { keyCode: 36 }) // home
+    fireKeyDown(getByTestId('tab-4'), { keyCode: 36 }) // home
     expect(document.activeElement).toBe(getByTestId('tab-2'))
 
     tabsDisabled = [true, false, false, false, true]
 
+    cleanup()
+
     const { getByTestId: getByTestId7 } = render(
-      <TabsExample
-        defaultIndex={2}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={2} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     getByTestId = getByTestId7
 
-    Simulate.keyDown(getByTestId('tab-2'), { keyCode: 35 }) // end
+    fireKeyDown(getByTestId('tab-2'), { keyCode: 35 }) // end
     expect(document.activeElement).toBe(getByTestId('tab-3'))
   })
 
@@ -339,22 +356,16 @@ describe('Tabs', () => {
     const tabs = [1, 2, 3, 4, 5]
     const tabsDisabled = [false, false, false, false, false]
 
-    resetIdCounter();
+    resetIdCounter()
 
     const comp1 = render(
-      <TabsExample
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
-    resetIdCounter();
+    resetIdCounter()
 
     const comp2 = render(
-      <TabsExample
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
     const id1 = comp1.getByTestId('tabWrapper').getAttribute('data-id')
@@ -363,22 +374,17 @@ describe('Tabs', () => {
     expect(id1).toEqual(id2)
   })
 
-  it('shouldn\'t respond to other keyDown', () => {
+  it("shouldn't respond to other keyDown", () => {
     const spy = jest.fn()
     const tabs = [1, 2, 3, 4, 5]
     const tabsDisabled = [false, false, false, false, false]
     const { getByTestId } = render(
-      <TabsExample
-        defaultIndex={0}
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample defaultIndex={0} tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
-    Simulate.keyDown(getByTestId('tab-0'), { keyCode: 121 })
+    fireKeyDown(getByTestId('tab-0'), { keyCode: 121 })
     expect(spy).not.toHaveBeenCalled()
   })
-
 
   it('throws error when changing from uncontrolled to controlled', () => {
     const tabs = [1, 2, 3, 4, 5]
@@ -388,23 +394,21 @@ describe('Tabs', () => {
     global.console.error = () => {}
 
     const { rerender } = render(
-      <TabsExample
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
-    const fn = () => rerender(
-          <TabsExample
-            selectedIndex={1}
-            tabs={tabs}
-            tabsDisabled={tabsDisabled}
-          />
-        )
+    const fn = () =>
+      rerender(
+        <TabsExample
+          selectedIndex={1}
+          tabs={tabs}
+          tabsDisabled={tabsDisabled}
+        />,
+      )
 
-     expect(fn).toThrowErrorMatchingSnapshot()
+    expect(fn).toThrowErrorMatchingSnapshot()
 
-     global.console.error = bak
+    global.console.error = bak
   })
 
   it('should not throw error when changing from uncontrolled to controlled in production', () => {
@@ -414,22 +418,20 @@ describe('Tabs', () => {
     global.process.env.NODE_ENV = 'production'
 
     const { rerender } = render(
-      <TabsExample
-        tabs={tabs}
-        tabsDisabled={tabsDisabled}
-      />
+      <TabsExample tabs={tabs} tabsDisabled={tabsDisabled} />,
     )
 
-    const fn = () => rerender(
-          <TabsExample
-            selectedIndex={1}
-            tabs={tabs}
-            tabsDisabled={tabsDisabled}
-          />
-        )
+    const fn = () =>
+      rerender(
+        <TabsExample
+          selectedIndex={1}
+          tabs={tabs}
+          tabsDisabled={tabsDisabled}
+        />,
+      )
 
-     expect(fn).not.toThrow()
+    expect(fn).not.toThrow()
 
-     global.process.env.NODE_ENV = bak
+    global.process.env.NODE_ENV = bak
   })
 })

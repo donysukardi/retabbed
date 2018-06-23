@@ -19,7 +19,7 @@ class ControlledTabs extends React.Component {
   handleClickAtTabIndex = (index, event) => {
     event.preventDefault()
     const { onSelect, selectedIndex } = this.props
-    if(selectedIndex !== index) {
+    if (selectedIndex !== index) {
       this.focus = true
       onSelect(index, selectedIndex, event)
     }
@@ -118,12 +118,12 @@ class ControlledTabs extends React.Component {
     return null
   }
 
-  getTabListProps = rest => ({
+  getTabListProps = (rest = {}) => ({
     role: 'tablist',
     ...rest,
   })
 
-  getTabPanelProps = ({ id, tabId, index: _index, ...rest }) => {
+  getTabPanelProps = ({ id, tabId, index: _index, ...rest } = {}) => {
     const item = {}
     let index = _index
 
@@ -150,7 +150,7 @@ class ControlledTabs extends React.Component {
     onKeyDown,
     onClick,
     ...rest
-  }) => {
+  } = {}) => {
     const { selectedIndex } = this.props
 
     let index = _index
